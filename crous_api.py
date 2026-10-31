@@ -62,6 +62,7 @@ class CrousAPI:
     def search(
         self,
         bounds: Optional[str] = None,
+        location_name: Optional[str] = None,
         max_price: Optional[float] = None,
         page: int = 1,
         page_size: int = 24,
@@ -71,6 +72,7 @@ class CrousAPI:
         Effectue une recherche de logements CROUS.
         
         :param bounds: Bounding box sous la forme 'lon1_lat1_lon2_lat2' ou None pour toute la France.
+        :param location_name: Nom de la localisation (ex: 'Paris').
         :param max_price: Prix maximum en euros (ex: 600).
         :param page: Numéro de page (1 par défaut).
         :param page_size: Nombre de résultats par page (24 par défaut).
@@ -91,6 +93,9 @@ class CrousAPI:
             "adaptedPmr": False,
             "toolMechanism": "residual"
         }
+
+        if location_name:
+            payload["locationName"] = location_name
 
         # Conversion du prix en centimes d'euros
         if max_price is not None and max_price > 0:

@@ -79,7 +79,8 @@ def main():
 
     phpsessid = os.getenv("CROUS_PHPSESSID")
     bounds = os.getenv("CROUS_BOUNDS")
-    interval = int(os.getenv("CHECK_INTERVAL_SECONDS", "60"))
+    location_name = os.getenv("CROUS_LOCATION_NAME", "Paris")
+    interval = int(os.getenv("CHECK_INTERVAL_SECONDS", "120"))
     max_price = os.getenv("MAX_PRICE_EUROS")
     max_price_val = float(max_price) if max_price and max_price.strip() else None
 
@@ -107,9 +108,9 @@ def main():
     print(" 🏠 CROUS HOUSING NOTIFIER - DÉMARRAGE DU BOT ")
     print("=" * 65)
     print(f"• Session Authentifiée : {'✅ Oui (PHPSESSID configuré)' if phpsessid else '⚠️ Non (Mode public)'}")
-    print(f"• Zone ciblée          : {'🗼 Paris intra-muros STRICT (75)' if only_paris else (bounds or 'Toute la France')}")
+    print(f"• Zone ciblée          : {'🗼 Paris intra-muros STRICT (75)' if only_paris else (location_name or bounds or 'Toute la France')}")
     print(f"• Budget Max           : {f'{max_price_val} €' if max_price_val else 'Aucune limite'}")
-    print(f"• Intervalle de veille : {interval} secondes")
+    print(f"• Intervalle de veille : {interval // 60} min ({interval} secondes)")
     print(f"• Alertes Discord      : {'✅ Activées' if discord_webhook else '❌ Désactivées'}")
     print(f"• Alertes Telegram     : {'✅ Activées' if telegram_token and telegram_chat else '❌ Désactivées'}")
     print(f"• Logements actifs vus : {len(active_ids)} (Historique global: {len(all_time_seen)})")
@@ -123,6 +124,7 @@ def main():
             try:
                 total, accommodations = api.search(
                     bounds=bounds,
+                    location_name=location_name,
                     max_price=max_price_val,
                     only_paris_75=only_paris
                 )

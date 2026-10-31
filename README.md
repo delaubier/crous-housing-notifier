@@ -59,11 +59,15 @@ Edit `.env` with your settings:
 # Optional: your PHPSESSID from Chrome DevTools for authenticated/student quotas
 CROUS_PHPSESSID=
 
-# Bounding box coordinates (lon1_lat1_lon2_lat2). Default is Paris & inner suburbs
-CROUS_BOUNDS=2.2402013113776147_48.934454116839824_2.4321187308112084_48.752114467903624
+# Bounding box coordinates for Paris intra-muros
+CROUS_BOUNDS=2.224122_48.902156_2.4697602_48.8155755
+CROUS_LOCATION_NAME=Paris
 
-# Check interval in seconds (default: 60s)
-CHECK_INTERVAL_SECONDS=60
+# Strict Paris intra-muros filter (75001-75020)
+ONLY_PARIS_INTRA_MUROS=true
+
+# Check interval in seconds (default: 120s / 2 minutes)
+CHECK_INTERVAL_SECONDS=120
 
 # Optional notification channels
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
@@ -99,9 +103,11 @@ Ce projet automatise cette veille en interrogeant directement l'API interne JSON
 | Variable | Description | Exemple / Défaut |
 | :--- | :--- | :--- |
 | `CROUS_PHPSESSID` | Cookie de session récupéré dans Chrome DevTools pour voir les logements réservés aux boursiers / DSE. | `u4ta9kn...` (Optionnel) |
-| `CROUS_BOUNDS` | Coordonnées de recherche rectangulaire (`lon1_lat1_lon2_lat2`). Laisser vide pour toute la France. | Paris et banlieue par défaut |
+| `CROUS_BOUNDS` | Coordonnées de recherche rectangulaire (`lon1_lat1_lon2_lat2`). | `2.224122_48.902156_2.4697602_48.8155755` (Paris) |
+| `CROUS_LOCATION_NAME` | Nom de la ville/secteur. | `Paris` |
+| `ONLY_PARIS_INTRA_MUROS` | Exclut strictement la banlieue pour ne garder que Paris 75. | `true` |
 | `MAX_PRICE_EUROS` | Plafond de loyer maximum en euros. | `500` (Optionnel) |
-| `CHECK_INTERVAL_SECONDS` | Intervalle entre chaque vérification en secondes. | `60` |
+| `CHECK_INTERVAL_SECONDS` | Intervalle entre chaque vérification en secondes (2 min = 120s). | `120` |
 | `DISCORD_WEBHOOK_URL` | URL de Webhook pour recevoir les alertes sur un salon Discord. | `https://discord.com/...` |
 | `TELEGRAM_BOT_TOKEN` | Token du bot Telegram. | `123456:ABC...` |
 | `TELEGRAM_CHAT_ID` | Identifiant de la conversation Telegram où envoyer les alertes. | `987654321` |
