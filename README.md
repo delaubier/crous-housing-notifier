@@ -59,12 +59,9 @@ Edit `.env` with your settings:
 # Optional: your PHPSESSID from Chrome DevTools for authenticated/student quotas
 CROUS_PHPSESSID=
 
-# Bounding box coordinates for Paris intra-muros
+# Bounding box coordinates for Paris
 CROUS_BOUNDS=2.224122_48.902156_2.4697602_48.8155755
 CROUS_LOCATION_NAME=Paris
-
-# Strict Paris intra-muros filter (75001-75020)
-ONLY_PARIS_INTRA_MUROS=true
 
 # Check interval in seconds (default: 120s / 2 minutes)
 CHECK_INTERVAL_SECONDS=120
@@ -105,7 +102,6 @@ Ce projet automatise cette veille en interrogeant directement l'API interne JSON
 | `CROUS_PHPSESSID` | Cookie de session récupéré dans Chrome DevTools pour voir les logements réservés aux boursiers / DSE. | `u4ta9kn...` (Optionnel) |
 | `CROUS_BOUNDS` | Coordonnées de recherche rectangulaire (`lon1_lat1_lon2_lat2`). | `2.224122_48.902156_2.4697602_48.8155755` (Paris) |
 | `CROUS_LOCATION_NAME` | Nom de la ville/secteur. | `Paris` |
-| `ONLY_PARIS_INTRA_MUROS` | Exclut strictement la banlieue pour ne garder que Paris 75. | `true` |
 | `MAX_PRICE_EUROS` | Plafond de loyer maximum en euros. | `500` (Optionnel) |
 | `CHECK_INTERVAL_SECONDS` | Intervalle entre chaque vérification en secondes (2 min = 120s). | `120` |
 | `DISCORD_WEBHOOK_URL` | URL de Webhook pour recevoir les alertes sur un salon Discord. | `https://discord.com/...` |

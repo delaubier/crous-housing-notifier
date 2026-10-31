@@ -79,13 +79,10 @@ def main():
 
     phpsessid = os.getenv("CROUS_PHPSESSID")
     bounds = os.getenv("CROUS_BOUNDS")
-    location_name = os.getenv("CROUS_LOCATION_NAME", "Paris")
+    location_name = os.getenv("CROUS_LOCATION_NAME")
     interval = int(os.getenv("CHECK_INTERVAL_SECONDS", "120"))
     max_price = os.getenv("MAX_PRICE_EUROS")
     max_price_val = float(max_price) if max_price and max_price.strip() else None
-
-    only_paris_str = os.getenv("ONLY_PARIS_INTRA_MUROS", "true").lower()
-    only_paris = only_paris_str in ("true", "1", "yes")
 
     discord_webhook = os.getenv("DISCORD_WEBHOOK_URL")
     telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -108,7 +105,7 @@ def main():
     print(" 🏠 CROUS HOUSING NOTIFIER - DÉMARRAGE DU BOT ")
     print("=" * 65)
     print(f"• Session Authentifiée : {'✅ Oui (PHPSESSID configuré)' if phpsessid else '⚠️ Non (Mode public)'}")
-    print(f"• Zone ciblée          : {'🗼 Paris intra-muros STRICT (75)' if only_paris else (location_name or bounds or 'Toute la France')}")
+    print(f"• Zone géographique    : {location_name or bounds or 'Toute la France'}")
     print(f"• Budget Max           : {f'{max_price_val} €' if max_price_val else 'Aucune limite'}")
     print(f"• Intervalle de veille : {interval // 60} min ({interval} secondes)")
     print(f"• Alertes Discord      : {'✅ Activées' if discord_webhook else '❌ Désactivées'}")
@@ -125,8 +122,7 @@ def main():
                 total, accommodations = api.search(
                     bounds=bounds,
                     location_name=location_name,
-                    max_price=max_price_val,
-                    only_paris_75=only_paris
+                    max_price=max_price_val
                 )
                 logger.info(f"[{now}] Logements actuellement disponibles : {total}")
 

@@ -65,8 +65,7 @@ class CrousAPI:
         location_name: Optional[str] = None,
         max_price: Optional[float] = None,
         page: int = 1,
-        page_size: int = 24,
-        only_paris_75: bool = False
+        page_size: int = 24
     ) -> Tuple[int, List[Accommodation]]:
         """
         Effectue une recherche de logements CROUS.
@@ -76,7 +75,6 @@ class CrousAPI:
         :param max_price: Prix maximum en euros (ex: 600).
         :param page: Numéro de page (1 par défaut).
         :param page_size: Nombre de résultats par page (24 par défaut).
-        :param only_paris_75: Filtre strictement sur Paris intra-muros (code postal 75001 à 75020).
         :return: (total_trouvé, liste_de_logements)
         """
         payload = {
@@ -177,19 +175,6 @@ class CrousAPI:
                 url=f"{self.BASE_URL}/tools/47/search"
             )
             accommodations.append(acc)
-
-        if only_paris_75:
-            filtered = []
-            for acc in accommodations:
-                addr = acc.address.lower()
-                city = acc.city.lower()
-                # Vérifie la présence d'un code postal parisien (75001 à 75020) ou ville Paris
-                has_75 = any(f"750{i:02d}" in addr for i in range(1, 21)) or " 750" in addr or "paris" in city
-                # Exclut explicitement les départements de banlieue
-                is_banlieue = any(f" {dept}" in addr or f"{dept}0" in addr or f"{dept}1" in addr or f"{dept}2" in addr or f"{dept}3" in addr or f"{dept}4" in addr for dept in ["92", "93", "94", "91", "95", "77", "78"])
-                if has_75 and not is_banlieue:
-                    filtered.append(acc)
-            return len(filtered), filtered
 
         return total, accommodations
 
