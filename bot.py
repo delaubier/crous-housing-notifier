@@ -30,7 +30,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("crous_bot")
 
-HISTORY_FILE = Path("seen_logements.json")
+HISTORY_DIR = Path(os.getenv("DATA_DIR", "."))
+HISTORY_FILE = HISTORY_DIR / "seen_logements.json"
 
 
 def load_state() -> tuple[set, set]:
@@ -101,10 +102,20 @@ def main():
         telegram_chat_id=telegram_chat
     )
 
+    # Vérification initiale de la validité du cookie
+    session_valid, session_user = api.check_session()
+
     print("=" * 65)
     print(" 🏠 CROUS HOUSING NOTIFIER - DÉMARRAGE DU BOT ")
     print("=" * 65)
-    print(f"• Session Authentifiée : {'✅ Oui (PHPSESSID configuré)' if phpsessid else '⚠️ Non (Mode public)'}")
+    if phpsessid:
+        if session_valid:
+            print(f"• Session Authentifiée : ✅ Valide ({session_user})")
+        else:
+            print(f"• Session Authentifiée : ❌ Invalide / Expirée !")
+    else:
+        print(f"• Session Authentifiée : ⚠️ Non configurée (Mode public)")
+
     print(f"• Zone géographique    : {location_name or bounds or 'Toute la France'}")
     print(f"• Budget Max           : {f'{max_price_val} €' if max_price_val else 'Aucune limite'}")
     print(f"• Intervalle de veille : {interval // 60} min ({interval} secondes)")
@@ -113,9 +124,22 @@ def main():
     print(f"• Logements actifs vus : {len(active_ids)} (Historique global: {len(all_time_seen)})")
     print("=" * 65)
 
+    session_alert_sent = not session_valid if phpsessid else False
+
     try:
         while True:
             now = datetime.now().strftime("%H:%M:%S")
+
+            # Vérification de l'état de la session si un PHPSESSID est renseigné
+            if phpsessid:
+                is_valid, _ = api.check_session()
+                if not is_valid:
+                    if not session_alert_sent:
+                        notifier.notify_session_expired()
+                        session_alert_sent = True
+                else:
+                    session_alert_sent = False
+
             logger.info("Vérification des disponibilités CROUS...")
 
             try:

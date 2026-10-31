@@ -81,6 +81,15 @@ python bot.py
 python bot.py --once
 ```
 
+### 🐳 Run with Docker / TrueNAS / HomeLab
+```bash
+# Build & start container in background
+docker compose up -d --build
+
+# View logs
+docker compose logs -f
+```
+
 ---
 
 <br>

@@ -146,3 +146,45 @@ class Notifier:
                 logger.warning(f"Telegram Bot error: {res.status_code} - {res.text}")
         except Exception as e:
             logger.error(f"Erreur d'envoi Telegram: {e}")
+
+    def notify_session_expired(self):
+        """Alerte lorsque la session PHPSESSID a expiré."""
+        msg = (
+            "⚠️ [ALERTE] Votre session CROUS (PHPSESSID) a expiré !\n"
+            "Le bot ne peut plus voir les logements réservés aux étudiants.\n"
+            "Veuillez vous reconnecter sur Chrome et mettre à jour le .env."
+        )
+        print("\n" + "!" * 65)
+        print(msg)
+        print("!" * 65 + "\n")
+
+        if self.discord_webhook_url:
+            embed = {
+                "title": "⚠️ Session CROUS expirée !",
+                "description": (
+                    "Votre session étudiante (**PHPSESSID**) a expiré auprès du CROUS.\n\n"
+                    "👉 **Conséquence :** Le bot ne reçoit plus les logements réservés (boursiers/DSE).\n"
+                    "👉 **Action requise :** Reconnectez-vous sur [trouverunlogement.lescrous.fr](https://trouverunlogement.lescrous.fr), récupérez votre nouveau `PHPSESSID` et mettez-le dans votre `.env`."
+                ),
+                "color": 15158332,  # Rouge d'alerte
+                "footer": {"text": "CROUS Housing Notifier • Alerte d'authentification"}
+            }
+            try:
+                requests.post(self.discord_webhook_url, json={"username": "CROUS Notifier Bot", "embeds": [embed]}, timeout=8)
+            except Exception as e:
+                logger.error(f"Erreur Discord alerte session: {e}")
+
+        if self.telegram_bot_token and self.telegram_chat_id:
+            text = (
+                "⚠️ <b>ALERTE : Session CROUS expirée !</b>\n\n"
+                "Votre cookie <code>PHPSESSID</code> est désormais invalide.\n"
+                "Veuillez vous reconnecter sur TrouverUnLogement et mettre à jour le <code>.env</code>."
+            )
+            try:
+                requests.post(
+                    f"https://api.telegram.org/bot{self.telegram_bot_token}/sendMessage",
+                    json={"chat_id": self.telegram_chat_id, "text": text, "parse_mode": "HTML"},
+                    timeout=8
+                )
+            except Exception as e:
+                logger.error(f"Erreur Telegram alerte session: {e}")

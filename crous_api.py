@@ -56,8 +56,32 @@ class CrousAPI:
     def __init__(self, phpsessid: Optional[str] = None):
         self.session = requests.Session()
         self.session.headers.update(self.DEFAULT_HEADERS)
+        self.phpsessid = phpsessid
         if phpsessid:
             self.session.cookies.set("PHPSESSID", phpsessid, domain="trouverunlogement.lescrous.fr")
+
+    def check_session(self) -> Tuple[bool, Optional[str]]:
+        """
+        Vérifie si le PHPSESSID est toujours valide auprès du CROUS.
+        
+        :return: (is_valid, user_name_or_message)
+        """
+        if not self.phpsessid:
+            return True, "Mode public (non authentifié)"
+
+        try:
+            res = self.session.get(f"{self.BASE_URL}/api/fr/user", timeout=10)
+            if res.status_code == 200:
+                data = res.json()
+                if data and isinstance(data, dict):
+                    identity = data.get("identity", {})
+                    first = identity.get("firstName", "")
+                    last = identity.get("lastName", "")
+                    name = f"{first} {last}".strip() or data.get("email", "Étudiant")
+                    return True, name
+            return False, "Session expirée ou invalide"
+        except Exception as e:
+            return False, f"Erreur de vérification: {e}"
 
     def search(
         self,
