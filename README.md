@@ -127,3 +127,4 @@ Cet outil est un projet éducatif open-source conçu pour la veille personnelle 
 ## 📜 Licence
 
 Distribué sous licence **MIT**. Voir [LICENSE](LICENSE) pour plus de détails.
+

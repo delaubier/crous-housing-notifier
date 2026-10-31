@@ -32,20 +32,24 @@ class Notifier:
         self.telegram_bot_token = telegram_bot_token.strip() if telegram_bot_token else None
         self.telegram_chat_id = telegram_chat_id.strip() if telegram_chat_id else None
 
-    def notify(self, acc: Accommodation):
+    def notify(self, acc: Accommodation, is_reappearance: bool = False):
         """Envoie une alerte sur tous les canaux activés."""
-        self._notify_console(acc)
+        self._notify_console(acc, is_reappearance)
 
         if self.discord_webhook_url:
-            self._notify_discord(acc)
+            self._notify_discord(acc, is_reappearance)
 
         if self.telegram_bot_token and self.telegram_chat_id:
-            self._notify_telegram(acc)
+            self._notify_telegram(acc, is_reappearance)
 
-    def _notify_console(self, acc: Accommodation):
+    def _notify_console(self, acc: Accommodation, is_reappearance: bool = False):
         """Affiche l'alerte sur la console."""
-        print("\n" + "=" * 60)
-        print(f"🚨 [NOUVEAU LOGEMENT DÉTECTÉ] ID: {acc.id}")
+        print("\n" + "=" * 65)
+        if is_reappearance:
+            print(f"♻️  [DE NOUVEAU DISPONIBLE ! RÉAPPARITION] ID: {acc.id}")
+            print(f"⚡ Ce logement avait disparu du site et vient d'être remis en ligne !")
+        else:
+            print(f"🚨 [NOUVEAU LOGEMENT DÉTECTÉ] ID: {acc.id}")
         print(f"🏢 {acc.residence_name}")
         print(f"📍 {acc.address}")
         print(f"🏠 {acc.title} ({acc.area_formatted})")
@@ -55,15 +59,24 @@ class Notifier:
         if acc.transports:
             print(f"🚇 Transports  : {', '.join(acc.transports[:3])}")
         print(f"🔗 {acc.url}")
-        print("=" * 60 + "\n")
+        print("=" * 65 + "\n")
 
-    def _notify_discord(self, acc: Accommodation):
+    def _notify_discord(self, acc: Accommodation, is_reappearance: bool = False):
         """Envoie un message enrichi (Embed) via Webhook Discord."""
+        if is_reappearance:
+            title = f"♻️ DE NOUVEAU DISPONIBLE : {acc.residence_name}"
+            desc = f"🔥 **{acc.title}** avait disparu et vient d'être **remis en ligne** !"
+            color = 16744203  # Orange doré / urgent
+        else:
+            title = f"🚨 Nouveau Logement : {acc.residence_name}"
+            desc = f"**{acc.title}** disponible immédiatement !"
+            color = 3066993  # Vert émeraude
+
         embed = {
-            "title": f"🚨 Nouveau Logement : {acc.residence_name}",
+            "title": title,
             "url": acc.url,
-            "description": f"**{acc.title}** disponible immédiatement !",
-            "color": 3066993,  # Vert émeraude
+            "description": desc,
+            "color": color,
             "fields": [
                 {"name": "💶 Loyer", "value": acc.rent_formatted, "inline": True},
                 {"name": "📐 Surface", "value": acc.area_formatted, "inline": True},
@@ -101,10 +114,15 @@ class Notifier:
         except Exception as e:
             logger.error(f"Erreur d'envoi Discord: {e}")
 
-    def _notify_telegram(self, acc: Accommodation):
+    def _notify_telegram(self, acc: Accommodation, is_reappearance: bool = False):
         """Envoie un message formaté via Bot Telegram."""
+        if is_reappearance:
+            header = "♻️ <b>DE NOUVEAU DISPONIBLE (RÉAPPARITION)</b>\n<i>Ce logement avait disparu et vient d'être remis en ligne !</i>\n"
+        else:
+            header = "🚨 <b>NOUVEAU LOGEMENT CROUS</b>\n"
+
         text = (
-            f"🚨 <b>NOUVEAU LOGEMENT CROUS</b>\n\n"
+            f"{header}\n"
             f"🏢 <b>{acc.residence_name}</b>\n"
             f"🏠 Type : {acc.title} ({acc.area_formatted})\n"
             f"💶 Loyer : <b>{acc.rent_formatted}</b>\n"

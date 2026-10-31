@@ -33,25 +33,39 @@ logger = logging.getLogger("crous_bot")
 HISTORY_FILE = Path("seen_logements.json")
 
 
-def load_seen_ids() -> set:
-    """Charge la liste des IDs déjà vus pour éviter les alertes en double."""
+def load_state() -> tuple[set, set]:
+    """
+    Charge l'état de surveillance :
+    - active_ids: logements présents sur le site lors de la dernière vérification.
+    - all_time_seen: historique global de tous les logements vus au moins une fois.
+    """
     if HISTORY_FILE.exists():
         try:
             with open(HISTORY_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return set(data)
-        except Exception:
-            return set()
-    return set()
+                if isinstance(data, dict):
+                    active_ids = set(data.get("active_ids", []))
+                    all_time_seen = set(data.get("all_time_seen", []))
+                    return active_ids, all_time_seen
+                elif isinstance(data, list):
+                    # Rétrocompatibilité avec l'ancien format
+                    s = set(data)
+                    return s, set(s)
+        except Exception as e:
+            logger.warning(f"Erreur de lecture de l'état : {e}")
+    return set(), set()
 
 
-def save_seen_ids(seen_ids: set):
-    """Sauvegarde les IDs vus sur le disque."""
+def save_state(active_ids: set, all_time_seen: set):
+    """Sauvegarde l'état courant sur le disque."""
     try:
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(list(seen_ids), f, indent=2)
+            json.dump({
+                "active_ids": list(active_ids),
+                "all_time_seen": list(all_time_seen)
+            }, f, indent=2)
     except Exception as e:
-        logger.error(f"Erreur lors de la sauvegarde de l'historique : {e}")
+        logger.error(f"Erreur lors de la sauvegarde de l'état : {e}")
 
 
 def main():
@@ -69,6 +83,9 @@ def main():
     max_price = os.getenv("MAX_PRICE_EUROS")
     max_price_val = float(max_price) if max_price and max_price.strip() else None
 
+    only_paris_str = os.getenv("ONLY_PARIS_INTRA_MUROS", "true").lower()
+    only_paris = only_paris_str in ("true", "1", "yes")
+
     discord_webhook = os.getenv("DISCORD_WEBHOOK_URL")
     telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
     telegram_chat = os.getenv("TELEGRAM_CHAT_ID")
@@ -77,7 +94,7 @@ def main():
         HISTORY_FILE.unlink()
         logger.info("Historique réinitialisé.")
 
-    seen_ids = load_seen_ids()
+    active_ids, all_time_seen = load_state()
 
     api = CrousAPI(phpsessid=phpsessid)
     notifier = Notifier(
@@ -90,38 +107,60 @@ def main():
     print(" 🏠 CROUS HOUSING NOTIFIER - DÉMARRAGE DU BOT ")
     print("=" * 65)
     print(f"• Session Authentifiée : {'✅ Oui (PHPSESSID configuré)' if phpsessid else '⚠️ Non (Mode public)'}")
-    print(f"• Zone géographique    : {bounds or 'Toute la France'}")
+    print(f"• Zone ciblée          : {'🗼 Paris intra-muros STRICT (75)' if only_paris else (bounds or 'Toute la France')}")
     print(f"• Budget Max           : {f'{max_price_val} €' if max_price_val else 'Aucune limite'}")
     print(f"• Intervalle de veille : {interval} secondes")
     print(f"• Alertes Discord      : {'✅ Activées' if discord_webhook else '❌ Désactivées'}")
     print(f"• Alertes Telegram     : {'✅ Activées' if telegram_token and telegram_chat else '❌ Désactivées'}")
-    print(f"• Logements en mémoire : {len(seen_ids)}")
+    print(f"• Logements actifs vus : {len(active_ids)} (Historique global: {len(all_time_seen)})")
     print("=" * 65)
-
-    is_first_run = len(seen_ids) == 0
 
     try:
         while True:
             now = datetime.now().strftime("%H:%M:%S")
-            logger.info(f"Vérification des disponibilités CROUS...")
+            logger.info("Vérification des disponibilités CROUS...")
 
             try:
-                total, accommodations = api.search(bounds=bounds, max_price=max_price_val)
-                logger.info(f"[{now}] Total logements disponibles : {total}")
+                total, accommodations = api.search(
+                    bounds=bounds,
+                    max_price=max_price_val,
+                    only_paris_75=only_paris
+                )
+                logger.info(f"[{now}] Logements actuellement disponibles : {total}")
 
+                current_ids = {acc.id for acc in accommodations}
+
+                # 1. Détection des logements qui ont disparu (réservés ou retirés)
+                disappeared_ids = active_ids - current_ids
+                if disappeared_ids:
+                    logger.info(f"ℹ️ [{len(disappeared_ids)} logement(s) disparu(s)] Probablement réservé(s) ou retiré(s) : {list(disappeared_ids)}")
+
+                # 2. Détection des apparitions (nouveau ou réapparition)
                 new_count = 0
-                for acc in accommodations:
-                    if acc.id not in seen_ids:
-                        seen_ids.add(acc.id)
-                        new_count += 1
-                        # Si c'est le tout premier démarrage, on peut soit notifier tout soit juste enregistrer
-                        notifier.notify(acc)
+                reappeared_count = 0
 
-                if new_count > 0:
-                    save_seen_ids(seen_ids)
-                    logger.info(f"✨ {new_count} nouvelle(s) offre(s) détectée(s) et notifiée(s) !")
-                else:
-                    logger.info("Aucune nouvelle offre depuis la dernière vérification.")
+                for acc in accommodations:
+                    if acc.id not in active_ids:
+                        # Le logement n'était pas actif au tour précédent !
+                        is_reappearance = acc.id in all_time_seen
+
+                        if is_reappearance:
+                            reappeared_count += 1
+                            logger.info(f"♻️ Logement ID {acc.id} réapparu après une disparition !")
+                        else:
+                            new_count += 1
+                            all_time_seen.add(acc.id)
+                            logger.info(f"✨ Nouveau logement ID {acc.id} détecté pour la première fois !")
+
+                        # Envoi de la notification
+                        notifier.notify(acc, is_reappearance=is_reappearance)
+
+                # Mise à jour des logements actifs pour le prochain tour
+                active_ids = current_ids
+                save_state(active_ids, all_time_seen)
+
+                if new_count == 0 and reappeared_count == 0 and not disappeared_ids:
+                    logger.info("Aucun changement dans les disponibilités.")
 
             except Exception as e:
                 logger.error(f"Erreur lors de la requête CROUS : {e}")
