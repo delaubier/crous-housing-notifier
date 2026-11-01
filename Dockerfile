@@ -18,3 +18,4 @@ COPY crous_api.py notifier.py bot.py ./
 RUN mkdir -p /app/data
 
 CMD ["python", "bot.py"]
+

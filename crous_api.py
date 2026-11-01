@@ -4,6 +4,7 @@ Module de communication avec l'API interne du CROUS (trouverunlogement.lescrous.
 
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
+import urllib.parse
 import requests
 
 
@@ -181,7 +182,8 @@ class CrousAPI:
             if medias and isinstance(medias, list) and len(medias) > 0:
                 src = medias[0].get("src")
                 if src:
-                    image_url = f"{self.BASE_URL}/resources/{src}"
+                    encoded_src = urllib.parse.quote(src)
+                    image_url = f"{self.BASE_URL}/resources/{encoded_src}"
 
             acc = Accommodation(
                 id=item.get("id"),
